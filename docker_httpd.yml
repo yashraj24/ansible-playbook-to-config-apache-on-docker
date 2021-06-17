@@ -1,0 +1,55 @@
+- name: Configuring httpd on docker-ce
+  hosts: web_server
+  tasks:
+
+  - name: Adding docker repository in yum
+    yum_repository:
+      name: docker_repo
+      description: my docker repo
+      baseurl: https://download.docker.com/linux/centos/7/x86_64/stable/
+      gpgcheck: no
+      enabled: true
+    when: ansible_distribution == "RedHat"
+
+  - name: Installing docker-ce
+    command: "yum install docker-ce -y --nobest"
+
+  - name: Starting docker services
+    service:
+      name: "docker"
+      state: started
+      enabled: yes
+
+  - name: Installing python36
+    package:
+      name: python36
+      state: present
+
+  - name: Installing docker sdk for python
+    pip:
+      name: docker-py
+
+  - name: Getting httpd image
+    docker_image:
+      name: httpd
+      source: pull
+
+  - name: Creating directory for storing web pages
+    file:
+      path: /root/httpd_docs
+      state: directory
+
+  - name: Copying webpages to the directory
+    copy:
+      src: "/etc/myverse/mydata/html_files/"
+      dest: "/root/httpd_docs/"
+      mode: preserve
+
+  - name: Provisioning container
+    docker_container:
+      name: web_server
+      image: httpd
+      state: started
+      exposed_ports: 80
+      ports: "2020:80"
+      volumes: "/root/httpd_docs:/usr/local/apache2/htdocs/"
